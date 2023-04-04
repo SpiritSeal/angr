@@ -31,6 +31,7 @@ from ..reaching_definitions import ReachingDefinitionsAnalysis
 from .ailgraph_walker import AILGraphWalker, RemoveNodeNotice
 from .ailblock_walker import AILBlockWalker
 from .optimization_passes import get_default_optimization_passes, OptimizationPassStage
+from .replacement_recorder import ReplacementRecorder
 
 if TYPE_CHECKING:
     from angr.knowledge_plugins.cfg import CFGModel
@@ -92,6 +93,7 @@ class Clinic(Analysis):
         self._reset_variable_names = reset_variable_names
         self.reaching_definitions: Optional[ReachingDefinitionsAnalysis] = None
         self._cache = cache
+        self._replacement_recorder = ReplacementRecorder()
 
         self._new_block_addrs = set()
 
@@ -683,6 +685,7 @@ class Clinic(Analysis):
             peephole_optimizations=self.peephole_optimizations,
             cached_reaching_definitions=cached_rd,
             cached_propagator=cached_prop,
+            replacement_recorder=self._replacement_recorder,
         )
         # update the cache
         if cache is not None:
@@ -749,6 +752,7 @@ class Clinic(Analysis):
             narrow_expressions=narrow_expressions,
             only_consts=only_consts,
             fold_callexprs_into_conditions=fold_callexprs_into_conditions,
+            replacement_recorder=self._replacement_recorder,
         )
         # cache the simplifier's RDA analysis
         self.reaching_definitions = simp._reaching_definitions
@@ -1034,6 +1038,7 @@ class Clinic(Analysis):
             labels=self.kb.labels,
             reset=self._reset_variable_names,
         )
+        var_manager.map_variable_names_from_debug_info(self._replacement_recorder.equivalence_classes(), self.kb.dvars)
 
         # Link variables to each statement
         for block in ail_graph.nodes():
